@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luria — Análise de Ativos</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<!-- Recharts UMD depende do global PropTypes (pacote prop-types), não só React -->
+<script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+<script src="https://unpkg.com/recharts@2.10.0/umd/Recharts.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#2e55be;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:#0d1528}
+::-webkit-scrollbar-thumb{background:#1e2d4a;border-radius:2px}
+.card{background:#babfcc;border:1px solid #2c4575;border-radius:12px;padding:16px}
+.badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;display:inline-block}
+.badge-green{background:rgba(16,185,129,.15);color:#10b981}
+.badge-red{background:rgba(239,68,68,.15);color:#ef4444}
+.badge-blue{background:rgba(14,165,233,.15);color:#0ea5e9}
+.score-ring{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0}
+.score-h{background:rgba(16,185,129,.12);color:#10b981;border:2px solid rgba(16,185,129,.3)}
+.score-m{background:rgba(234,179,8,.12);color:#eab308;border:2px solid rgba(234,179,8,.3)}
+.score-l{background:rgba(239,68,68,.12);color:#ef4444;border:2px solid rgba(239,68,68,.3)}
+select{background:#0f1629;border:1px solid #1e2d4a;color:#f1f5f9;border-radius:8px;padding:7px 10px;font-size:13px;cursor:pointer;outline:none}
+select:focus{border-color:#0ea5e9}
+input[type=text]{background:#0f1629;border:1px solid #1e2d4a;color:#f1f5f9;border-radius:10px;padding:12px 16px;font-size:14px;outline:none;width:100%;transition:border-color .2s}
+input[type=text]:focus{border-color:#0ea5e9}
+input::placeholder{color:#374151}
+button{cursor:pointer}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo, useCallback } = React;
+const { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell } = Recharts;
+
+// ── MOCK DATA ────────────────────────────────────────────────────────────────
+
+const QUARTERS = ["T1/20","T2/20","T3/20","T4/20","T1/21","T2/21","T3/21","T4/21",
+  "T1/22","T2/22","T3/22","T4/22","T1/23","T2/23","T3/23","T4/23","T1/24","T2/24","T3/24","T4/24"];
+
+const QD = {
+  bp_liquidez_corrente:   [2.45,2.52,2.61,2.78,2.92,3.05,3.14,3.28,3.01,2.92,3.08,3.18,3.35,3.52,3.68,3.85,4.02,4.18,4.35,4.52],
+  bp_liquidez_seca:       [1.85,1.92,2.01,2.15,2.28,2.42,2.55,2.68,2.45,2.32,2.41,2.52,2.65,2.78,2.91,3.05,3.18,3.28,3.41,3.55],
+  bp_pl_sobre_ativo:      [0.420,0.432,0.448,0.465,0.479,0.492,0.508,0.522,0.499,0.482,0.492,0.502,0.512,0.523,0.535,0.548,0.560,0.572,0.582,0.595],
+  bp_passivo_sobre_ativo: [0.580,0.568,0.552,0.535,0.521,0.508,0.492,0.478,0.501,0.518,0.508,0.498,0.488,0.477,0.465,0.452,0.440,0.428,0.418,0.405],
+  bp_equity_multiplier:   [2.38,2.31,2.24,2.15,2.09,2.03,1.97,1.91,2.01,2.07,2.03,1.99,1.95,1.91,1.87,1.82,1.79,1.75,1.72,1.68],
+  bp_capital_giro_sobre_ativo:[0.35,0.36,0.37,0.38,0.39,0.40,0.41,0.42,0.40,0.38,0.39,0.40,0.41,0.42,0.43,0.44,0.45,0.46,0.47,0.48],
+  dre_margem_bruta:       [0.312,0.325,0.332,0.342,0.350,0.358,0.365,0.375,0.362,0.352,0.358,0.365,0.372,0.380,0.388,0.395,0.402,0.410,0.415,0.422],
+  dre_margem_ebit:        [0.132,0.145,0.152,0.162,0.168,0.175,0.182,0.192,0.175,0.168,0.172,0.180,0.185,0.192,0.198,0.205,0.210,0.217,0.222,0.228],
+  dre_margem_liquida:     [0.112,0.125,0.131,0.142,0.148,0.153,0.161,0.172,0.158,0.149,0.154,0.160,0.165,0.172,0.178,0.185,0.190,0.196,0.201,0.208],
+  dre_cobertura_juros:    [8.2,9.1,9.8,10.5,11.2,11.8,12.5,13.2,11.8,11.2,11.5,12.2,12.8,13.5,14.2,14.8,15.5,16.2,16.8,17.5],
+  dfc_cfo_sobre_receita:  [0.138,0.151,0.162,0.172,0.180,0.191,0.201,0.212,0.192,0.180,0.188,0.198,0.208,0.218,0.228,0.238,0.248,0.258,0.268,0.278],
+  dfc_accrual_ratio:      [0.025,0.022,0.018,0.015,0.012,0.009,0.007,0.005,0.010,0.013,0.011,0.009,0.007,0.005,0.004,0.003,0.002,0.001,0.001,0.000],
+  cmb_roe:                [0.278,0.295,0.312,0.335,0.348,0.368,0.382,0.402,0.362,0.342,0.358,0.372,0.385,0.401,0.415,0.428,0.442,0.452,0.465,0.478],
+  cmb_roa:                [0.122,0.132,0.141,0.152,0.160,0.172,0.182,0.192,0.172,0.162,0.170,0.178,0.188,0.198,0.208,0.218,0.228,0.238,0.248,0.258],
+  cmb_roic:               [0.185,0.198,0.212,0.225,0.238,0.252,0.265,0.278,0.255,0.242,0.252,0.262,0.272,0.282,0.292,0.302,0.312,0.322,0.332,0.342],
+  cmb_giro_ativo:         [0.68,0.72,0.75,0.78,0.80,0.82,0.85,0.88,0.82,0.79,0.81,0.84,0.86,0.89,0.91,0.94,0.96,0.98,1.00,1.02],
+};
+
+const MONTHS = [];
+for (let y=2020;y<=2024;y++) for (let m=1;m<=12;m++) MONTHS.push(`${String(m).padStart(2,'0')}/${y}`);
+
+const msin = (b,a,t,p=0) => Array.from({length:60},(_,i)=>
+  parseFloat((b+Math.sin(i*.35+p)*a+i*t).toFixed(4)));
+
+const MD = {
+  mkt_sharpe_252d:           msin(0.85,0.35,0.003),
+  mkt_sharpe_126d:           msin(0.72,0.42,0.003,0.3),
+  mkt_sharpe_63d:            msin(0.65,0.55,0.003,0.6),
+  mkt_sharpe_21d:            msin(0.58,0.70,0.003,0.9),
+  mkt_sortino_252d:          msin(1.2,0.5,0.004,0.5),
+  mkt_beta_252d:             msin(0.92,0.18,-0.001,1.0),
+  mkt_max_drawdown_252d:     msin(0.15,0.06,-0.001,1.5),
+  mkt_volatility_252d:       msin(0.22,0.07,-0.0008,2.0),
+  mkt_jensen_alpha_252d:     msin(0.06,0.04,0.0005,0.8),
+  mkt_calmar_ratio_252d:     msin(2.1,0.8,0.005,0.3),
+  mkt_omega_ratio_252d:      msin(1.8,0.5,0.003,1.2),
+  mkt_var_252d:              msin(0.018,0.006,-0.00015,0.7),
+  mkt_information_ratio_252d:msin(0.5,0.3,0.002,2.5),
+  mkt_tracking_error_252d:   msin(0.12,0.04,-0.0005,1.8),
+};
+
+// ── INDICATOR CATALOG ────────────────────────────────────────────────────────
+
+const IND = {
+  bp_liquidez_corrente:    {name:"Liquidez Corrente",    bloco:"BP",  unit:"RATIO",     thr:1.5, hb:true },
+  bp_liquidez_seca:        {name:"Liquidez Seca",        bloco:"BP",  unit:"RATIO",     thr:1.0, hb:true },
+  bp_pl_sobre_ativo:       {name:"PL / Ativo",           bloco:"BP",  unit:"RATIO",     thr:0.35,hb:true },
+  bp_passivo_sobre_ativo:  {name:"Passivo / Ativo",      bloco:"BP",  unit:"RATIO",     thr:0.65,hb:false},
+  bp_equity_multiplier:    {name:"Equity Multiplier",    bloco:"BP",  unit:"RATIO",     thr:2.5, hb:false},
+  bp_capital_giro_sobre_ativo:{name:"Capital de Giro/Ativo",bloco:"BP",unit:"RATIO",   thr:0.15,hb:true },
+  dre_margem_bruta:        {name:"Margem Bruta",         bloco:"DRE", unit:"PERCENTUAL",thr:0.25,hb:true },
+  dre_margem_ebit:         {name:"Margem EBIT",          bloco:"DRE", unit:"PERCENTUAL",thr:0.10,hb:true },
+  dre_margem_liquida:      {name:"Margem Líquida",       bloco:"DRE", unit:"PERCENTUAL",thr:0.08,hb:true },
+  dre_cobertura_juros:     {name:"Cobertura de Juros",   bloco:"DRE", unit:"RATIO",     thr:3.0, hb:true },
+  dfc_cfo_sobre_receita:   {name:"CFO / Receita",        bloco:"DFC", unit:"RATIO",     thr:0.10,hb:true },
+  dfc_accrual_ratio:       {name:"Accrual Ratio",        bloco:"DFC", unit:"RATIO",     thr:0.05,hb:false},
+  cmb_roe:                 {name:"ROE",                  bloco:"CMB", unit:"PERCENTUAL",thr:0.15,hb:true },
+  cmb_roa:                 {name:"ROA",                  bloco:"CMB", unit:"PERCENTUAL",thr:0.08,hb:true },
+  cmb_roic:                {name:"ROIC",                 bloco:"CMB", unit:"PERCENTUAL",thr:0.12,hb:true },
+  cmb_giro_ativo:          {name:"Giro do Ativo",        bloco:"CMB", unit:"RATIO",     thr:0.5, hb:true },
+  mkt_sharpe_252d:         {name:"Sharpe 252d",          bloco:"MKT", unit:"RATIO",     thr:0.5, hb:true },
+  mkt_sharpe_126d:         {name:"Sharpe 126d",          bloco:"MKT", unit:"RATIO",     thr:0.5, hb:true },
+  mkt_sharpe_63d:          {name:"Sharpe 63d",           bloco:"MKT", unit:"RATIO",     thr:0.5, hb:true },
+  mkt_sharpe_21d:          {name:"Sharpe 21d",           bloco:"MKT", unit:"RATIO",     thr:0.5, hb:true },
+  mkt_sortino_252d:        {name:"Sortino 252d",         bloco:"MKT", unit:"RATIO",     thr:0.8, hb:true },
+  mkt_beta_252d:           {name:"Beta 252d",            bloco:"MKT", unit:"RATIO",     thr:1.0, hb:false},
+  mkt_max_drawdown_252d:   {name:"Max Drawdown 252d",    bloco:"MKT", unit:"PERCENTUAL",thr:0.20,hb:false},
+  mkt_volatility_252d:     {name:"Volatilidade 252d",    bloco:"MKT", unit:"PERCENTUAL",thr:0.30,hb:false},
+  mkt_jensen_alpha_252d:   {name:"Alpha Jensen 252d",    bloco:"MKT", unit:"PERCENTUAL",thr:0.0, hb:true },
+  mkt_calmar_ratio_252d:   {name:"Calmar Ratio 252d",    bloco:"MKT", unit:"RATIO",     thr:1.0, hb:true },
+  mkt_omega_ratio_252d:    {name:"Omega Ratio 252d",     bloco:"MKT", unit:"RATIO",     thr:1.0, hb:true },
+  mkt_var_252d:            {name:"VaR 252d",             bloco:"MKT", unit:"RATIO",     thr:0.025,hb:false},
+  mkt_information_ratio_252d:{name:"Information Ratio 252d",bloco:"MKT",unit:"RATIO",  thr:0.3, hb:true },
+  mkt_tracking_error_252d: {name:"Tracking Error 252d",  bloco:"MKT", unit:"PERCENTUAL",thr:0.20,hb:false},
+};
+
+const BLOCOS = ["BP","DRE","DFC","CMB","MKT"];
+const BLOCO_CLR = {BP:"#3b82f6",DRE:"#a78bfa",DFC:"#f59e0b",CMB:"#10b981",MKT:"#f43f5e"};
+
+const fmtVal = (k,v) => {
+  const i = IND[k]; if(!i) return v.toFixed(3);
+  if(i.unit==="PERCENTUAL") return `${(v*100).toFixed(1)}%`;
+  if(i.unit==="MOEDA") return `R$${(v/1e6).toFixed(1)}M`;
+  return v.toFixed(2);
+};
+
+const isGd = (k,v) => {
+  const i = IND[k]; if(!i||i.thr===undefined) return null;
+  return i.hb ? v>=i.thr : v<=i.thr;
+};
+
+const getArr = (k) => {
+  if(MD[k]) return {labels:MONTHS,vals:MD[k]};
+  if(QD[k]) return {labels:QUARTERS,vals:QD[k]};
+  return {labels:[],vals:[]};
+};
+
+const mkChart = (k) => {
+  const {labels,vals} = getArr(k);
+  return labels.map((l,i)=>({l,v:vals[i]}));
+};
+
+// ── BEST STOCKS ──────────────────────────────────────────────────────────────
+
+const BEST = [
+  {ticker:"WEGE3",emp:"WEG S.A.",setor:"Bens de Capital",score:92,var1d:"+1.8%",preco:"R$ 52,40",
+   trend:[48,49,50,50.5,51,51.5,52,52.4],pos:true},
+  {ticker:"RDOR3",emp:"Rede D'Or",setor:"Saúde",score:88,var1d:"+0.9%",preco:"R$ 28,80",
+   trend:[26,27,27.5,28,27.8,28.2,28.5,28.8],pos:true},
+  {ticker:"RENT3",emp:"Localiza",setor:"Serviços",score:85,var1d:"+2.1%",preco:"R$ 41,20",
+   trend:[38,39,39.5,40,40.2,40.8,41,41.2],pos:true},
+  {ticker:"BBAS3",emp:"Banco do Brasil",setor:"Financeiro",score:82,var1d:"+0.4%",preco:"R$ 26,10",
+   trend:[25,25.5,25.8,26,25.9,26.1,26,26.1],pos:true},
+  {ticker:"ITUB4",emp:"Itaú Unibanco",setor:"Financeiro",score:80,var1d:"-0.2%",preco:"R$ 34,50",
+   trend:[35,34.8,34.5,34.8,34.6,34.5,34.4,34.5],pos:false},
+  {ticker:"VALE3",emp:"Vale S.A.",setor:"Mineração",score:76,var1d:"-1.1%",preco:"R$ 58,20",
+   trend:[60,59,58.5,59,58.8,58.5,58.2,58.2],pos:false},
+];
+
+// ── COMPONENTS ───────────────────────────────────────────────────────────────
+
+function Spark({data,pos}) {
+  const w=80,h=32,mn=Math.min(...data),mx=Math.max(...data),r=mx-mn||1;
+  const pts=data.map((v,i)=>`${((i/(data.length-1))*w).toFixed(1)},${(h-((v-mn)/r)*h).toFixed(1)}`).join(' ');
+  const clr=pos?'#10b981':'#ef4444';
+  return <svg width={w} height={h} style={{display:'block'}}>
+    <polyline points={pts} fill="none" stroke={clr} strokeWidth="1.5" strokeLinejoin="round"/>
+  </svg>;
+}
+
+function MiniChart({k}) {
+  const ind=IND[k]; if(!ind) return null;
+  const cd=mkChart(k); if(!cd.length) return null;
+  const vals=cd.map(d=>d.v), last=vals[vals.length-1];
+  const mn=Math.min(...vals), mx=Math.max(...vals), thr=ind.thr;
+  const good=isGd(k,last);
+  const clr=good===null?'#0ea5e9':good?'#10b981':'#ef4444';
+  const yMn=thr!==undefined?Math.min(mn,thr)*.88:mn*.9;
+  const yMx=thr!==undefined?Math.max(mx,thr)*1.1:mx*1.1;
+
+  const TT=({active,payload,label})=>{
+    if(!active||!payload?.length) return null;
+    return <div style={{background:'#1a2845',border:'1px solid #2d4a70',borderRadius:6,padding:'6px 10px',fontSize:11}}>
+      <div style={{color:'#64748b',marginBottom:2}}>{label}</div>
+      <div style={{color:clr,fontWeight:700}}>{fmtVal(k,payload[0].value)}</div>
+    </div>;
+  };
+
+  return <div className="card" style={{padding:12}}>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
+      <div>
+        <div style={{fontSize:10,color:BLOCO_CLR[ind.bloco]||'#64748b',fontWeight:700,marginBottom:2,letterSpacing:.5}}>{ind.bloco}</div>
+        <div style={{fontSize:11,fontWeight:500,color:'#e2e8f0',lineHeight:1.3}}>{ind.name}</div>
+      </div>
+      <div style={{textAlign:'right'}}>
+        <div style={{fontSize:15,fontWeight:800,color:clr}}>{fmtVal(k,last)}</div>
+        <div style={{fontSize:9,color:'#475569',marginTop:1}}>{ind.hb?'↑ maior=melhor':'↓ menor=melhor'}</div>
+      </div>
+    </div>
+    <ResponsiveContainer width="100%" height={72}>
+      <AreaChart data={cd} margin={{top:2,right:0,left:0,bottom:0}}>
+        <defs>
+          <linearGradient id={`g${k.replace(/[^a-z]/g,'')}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={clr} stopOpacity={.3}/>
+            <stop offset="95%" stopColor={clr} stopOpacity={0}/>
+          </linearGradient>
+        </defs>
+        {thr!==undefined && <>
+          {ind.hb
+            ? <><ReferenceArea y1={yMn} y2={thr} fill="rgba(239,68,68,.08)"/>
+                <ReferenceArea y1={thr} y2={yMx} fill="rgba(16,185,129,.08)"/></>
+            : <><ReferenceArea y1={yMn} y2={thr} fill="rgba(16,185,129,.08)"/>
+                <ReferenceArea y1={thr} y2={yMx} fill="rgba(239,68,68,.08)"/></>
+          }
+          <ReferenceLine y={thr} stroke="rgba(234,179,8,.7)" strokeDasharray="3 2" strokeWidth={1}/>
+        </>}
+        <XAxis dataKey="l" hide/><YAxis domain={[yMn,yMx]} hide/>
+        <Tooltip content={TT}/>
+        <Area type="monotone" dataKey="v" stroke={clr} strokeWidth={1.5}
+          fill={`url(#g${k.replace(/[^a-z]/g,'')})`} dot={false}
+          activeDot={{r:3,fill:clr,stroke:'#080d1a',strokeWidth:2}}/>
+      </AreaChart>
+    </ResponsiveContainer>
+    {thr!==undefined && <div style={{display:'flex',alignItems:'center',gap:4,marginTop:4}}>
+      <div style={{width:12,height:1,background:'rgba(234,179,8,.7)'}}/>
+      <span style={{fontSize:9,color:'#475569'}}>limiar {fmtVal(k,thr)}</span>
+    </div>}
+  </div>;
+}
+
+function StockCard({s,onClick}) {
+  const sc=s.score>=85?'score-h':s.score>=70?'score-m':'score-l';
+  return <div className="card" style={{cursor:'pointer',transition:'border-color .2s'}}
+    onClick={onClick}
+    onMouseEnter={e=>e.currentTarget.style.borderColor='#0ea5e9'}
+    onMouseLeave={e=>e.currentTarget.style.borderColor='#1e2d4a'}>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
+      <div>
+        <div style={{fontWeight:800,fontSize:15,color:'#f1f5f9'}}>{s.ticker}</div>
+        <div style={{fontSize:11,color:'#475569',marginTop:2,lineHeight:1.3}}>{s.emp}</div>
+      </div>
+      <div className={`score-ring ${sc}`}>{s.score}</div>
+    </div>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end'}}>
+      <div>
+        <div style={{fontSize:13,fontWeight:700,color:'#f1f5f9'}}>{s.preco}</div>
+        <span className={`badge badge-${s.pos?'green':'red'}`} style={{marginTop:4,display:'inline-block'}}>{s.var1d}</span>
+      </div>
+      <Spark data={s.trend} pos={s.pos}/>
+    </div>
+    <div style={{marginTop:8}}>
+      <span style={{fontSize:10,fontWeight:500,padding:'2px 8px',borderRadius:4,background:'#1a2845',color:'#475569'}}>{s.setor}</span>
+    </div>
+  </div>;
+}
+
+// ── HOME PAGE ─────────────────────────────────────────────────────────────────
+
+function HomePage({onNav}) {
+  const [tab,setTab]=useState('acoes');
+  const [q,setQ]=useState('');
+  const [sugg,setSugg]=useState([]);
+
+  const all=BEST.map(b=>({ticker:b.ticker,emp:b.emp}));
+  const handle=v=>{setQ(v);setSugg(v?all.filter(x=>x.ticker.includes(v.toUpperCase())||x.emp.toLowerCase().includes(v.toLowerCase())):[])}
+
+  return <div style={{maxWidth:480,margin:'0 auto',padding:'0 16px 40px'}}>
+    {/* Header */}
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'20px 0 28px'}}>
+      <span style={{fontSize:24,fontWeight:900,letterSpacing:'-1px',
+        background:'linear-gradient(135deg,#0ea5e9,#10b981)',
+        WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Luria</span>
+      <div style={{display:'flex',alignItems:'center',gap:10}}>
+        <div style={{width:36,height:36,borderRadius:'50%',background:'#1a2845',
+          border:'2px solid #253a5e',display:'flex',alignItems:'center',
+          justifyContent:'center',cursor:'pointer',fontSize:14}}>👤</div>
+        <div style={{display:'flex',flexDirection:'column',gap:4,cursor:'pointer',padding:4}}>
+          {[0,1,2].map(i=><div key={i} style={{width:18,height:2,background:'#475569',borderRadius:1}}/>)}
+        </div>
+      </div>
+    </div>
+
+    {/* Tabs */}
+    <div style={{display:'flex',gap:8,justifyContent:'center',marginBottom:24}}>
+      {['acoes','fiis'].map(t=>(
+        <button key={t} onClick={()=>setTab(t)} style={{
+          padding:'10px 36px',borderRadius:10,border:'1px solid',fontSize:14,
+          fontWeight:700,transition:'all .2s',
+          borderColor:tab===t?'#0ea5e9':'#1e2d4a',
+          background:tab===t?'rgba(14,165,233,.12)':'transparent',
+          color:tab===t?'#0ea5e9':'#475569'
+        }}>{t==='acoes'?'Ações':'FIIs'}</button>
+      ))}
+    </div>
+
+    {/* Search */}
+    <div style={{position:'relative',marginBottom:32}}>
+      <div style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',fontSize:14,color:'#374151'}}>🔍</div>
+      <input type="text" value={q} onChange={e=>handle(e.target.value)}
+        placeholder="Buscar ativo... ex: WEGE3, VALE3" style={{paddingLeft:36}}/>
+      {sugg.length>0 && <div style={{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,
+        background:'#0f1629',border:'1px solid #1e2d4a',borderRadius:10,overflow:'hidden',zIndex:100}}>
+        {sugg.map(s=><div key={s.ticker} onClick={()=>onNav('asset',{ticker:s.ticker,emp:s.emp})}
+          style={{padding:'10px 16px',cursor:'pointer',fontSize:13,color:'#e2e8f0',
+            display:'flex',alignItems:'center',gap:8}}
+          onMouseEnter={e=>e.currentTarget.style.background='#1a2845'}
+          onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+          <span style={{fontWeight:700,color:'#f1f5f9'}}>{s.ticker}</span>
+          <span style={{color:'#374151',fontSize:11}}>·</span>
+          <span style={{color:'#475569',fontSize:12}}>{s.emp}</span>
+        </div>)}
+      </div>}
+    </div>
+
+    {/* Best header */}
+    <div style={{marginBottom:14}}>
+      <div style={{fontSize:15,fontWeight:700,color:'#f1f5f9'}}>
+        {tab==='acoes'?'Melhores Ações':'Melhores FIIs'}
+      </div>
+      <div style={{fontSize:11,color:'#374151',marginTop:3}}>
+        Rankeados por score composto — fundamentalistas + quantitativos
+      </div>
+    </div>
+
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+      {BEST.map(s=><StockCard key={s.ticker} s={s} onClick={()=>onNav('asset',{ticker:s.ticker,emp:s.emp})}/>)}
+    </div>
+  </div>;
+}
+
+// ── ASSET PAGE ────────────────────────────────────────────────────────────────
+
+function AssetPage({ticker,emp,onBack}) {
+  const [mainK,setMainK]=useState('bp_liquidez_corrente');
+  const [ctype,setCtype]=useState('line');
+  const [showSel,setShowSel]=useState(false);
+  const [selMini,setSelMini]=useState([
+    'dre_margem_liquida','cmb_roe','bp_passivo_sobre_ativo',
+    'dre_cobertura_juros','mkt_sharpe_252d','mkt_sortino_252d'
+  ]);
+  const [sSearch,setSSearch]=useState('');
+
+  const cd=mkChart(mainK);
+  const ind=IND[mainK];
+  const vals=cd.map(d=>d.v);
+  const last=vals[vals.length-1];
+  const thr=ind?.thr;
+  const good=thr!==undefined?isGd(mainK,last):null;
+  const clr=good===null?'#0ea5e9':good?'#10b981':'#ef4444';
+  const mn=Math.min(...vals),mx=Math.max(...vals);
+  const yMn=thr!==undefined?Math.min(mn,thr)*.85:mn*.9;
+  const yMx=thr!==undefined?Math.max(mx,thr)*1.12:mx*1.1;
+
+  const TT=({active,payload,label})=>{
+    if(!active||!payload?.length) return null;
+    return <div style={{background:'#1a2845',border:'1px solid #253a5e',borderRadius:8,padding:'10px 14px',fontSize:12}}>
+      <div style={{color:'#475569',marginBottom:4}}>{label}</div>
+      <div style={{color:clr,fontWeight:800,fontSize:16}}>{fmtVal(mainK,payload[0].value)}</div>
+      {thr!==undefined&&<div style={{color:'#374151',fontSize:10,marginTop:2}}>limiar {fmtVal(mainK,thr)}</div>}
+    </div>;
+  };
+
+  const filtInds=Object.entries(IND).filter(([k,v])=>
+    (k.toLowerCase().includes(sSearch.toLowerCase())||
+     v.name.toLowerCase().includes(sSearch.toLowerCase())) &&
+    getArr(k).vals.length>0
+  );
+
+  const toggleMini=k=>setSelMini(p=>p.includes(k)?p.filter(x=>x!==k):[...p,k]);
+
+  return <div style={{maxWidth:480,margin:'0 auto',padding:'0 16px 48px'}}>
+    {/* Header */}
+    <div style={{display:'flex',alignItems:'center',gap:12,padding:'18px 0 20px'}}>
+      <button onClick={onBack} style={{background:'#0f1629',border:'1px solid #1e2d4a',
+        borderRadius:8,padding:'7px 14px',color:'#64748b',fontSize:13,fontWeight:500}}>← Voltar</button>
+      <div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{fontSize:17,fontWeight:800,color:'#f1f5f9'}}>{emp||'WEG S.A.'}</span>
+          <span className="badge badge-blue">{ticker}</span>
+        </div>
+        <div style={{fontSize:11,color:'#374151',marginTop:2}}>Bens de Capital · B3 · Câmbio: R$5,82</div>
+      </div>
+    </div>
+
+    {/* KPIs */}
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:16}}>
+      {[
+        {label:'Score Geral',val:'92',clr:'#10b981'},
+        {label:'Retorno 12m',val:'+48%',clr:'#10b981'},
+        {label:'Sharpe 252d',val:'1.14',clr:'#0ea5e9'},
+      ].map(m=><div key={m.label} style={{background:'#0f1629',border:'1px solid #1e2d4a',
+        borderRadius:10,padding:'10px 12px',textAlign:'center'}}>
+        <div style={{fontSize:10,color:'#374151',marginBottom:4}}>{m.label}</div>
+        <div style={{fontSize:20,fontWeight:900,color:m.clr}}>{m.val}</div>
+      </div>)}
+    </div>
+
+    {/* AI Analysis */}
+    <div style={{background:'linear-gradient(135deg,rgba(14,165,233,.07),rgba(16,185,129,.07))',
+      border:'1px solid rgba(14,165,233,.18)',borderRadius:12,padding:16,marginBottom:20}}>
+      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+        <div style={{width:22,height:22,borderRadius:6,
+          background:'linear-gradient(135deg,#0ea5e9,#10b981)',
+          display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,flexShrink:0}}>✦</div>
+        <span style={{fontSize:12,fontWeight:700,color:'#0ea5e9',letterSpacing:.3}}>Análise Luria</span>
+      </div>
+      <p style={{fontSize:13,color:'#cbd5e1',lineHeight:1.75,margin:0}}>
+        <strong style={{color:'#f1f5f9'}}>WEGE3</strong> apresenta fundamentos excepcionais entre as industriais brasileiras.
+        A <span style={{color:'#10b981',fontWeight:600}}>liquidez corrente de 4.52×</span> é mais que o dobro do limiar de segurança,
+        indicando posição financeira extremamente sólida. O <span style={{color:'#10b981',fontWeight:600}}>ROE de 47.8%</span> e
+        a <span style={{color:'#10b981',fontWeight:600}}>margem líquida de 20.8%</span> — ambos em crescimento contínuo desde 2020 —
+        refletem eficiência operacional de primeira linha. Quantitativamente, o Sharpe de 1.14
+        e o Sortino de 1.62 confirmam retorno ajustado ao risco muito acima da média do Ibovespa.
+        O alavancagem (passivo/ativo de 0.40) segue em queda, reduzindo risco sistêmico.
+      </p>
+    </div>
+
+    {/* Main Chart */}
+    <div className="card" style={{marginBottom:20}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14,flexWrap:'wrap',gap:8}}>
+        <select value={mainK} onChange={e=>setMainK(e.target.value)} style={{flex:1,minWidth:160}}>
+          {BLOCOS.map(b=><optgroup key={b} label={b}>
+            {Object.entries(IND).filter(([_,v])=>v.bloco===b&&getArr(_).vals.length>0)
+              .map(([k,v])=><option key={k} value={k}>{v.name}</option>)}
+          </optgroup>)}
+        </select>
+        <div style={{display:'flex',gap:4}}>
+          {['line','bar'].map(t=><button key={t} onClick={()=>setCtype(t)} style={{
+            padding:'7px 12px',borderRadius:8,border:'1px solid',fontSize:12,fontWeight:600,
+            borderColor:ctype===t?'#0ea5e9':'#1e2d4a',
+            background:ctype===t?'rgba(14,165,233,.15)':'transparent',
+            color:ctype===t?'#0ea5e9':'#475569'
+          }}>{t==='line'?'〜 Linha':'▊ Barra'}</button>)}
+        </div>
+      </div>
+
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:14}}>
+        <div>
+          <div style={{fontSize:30,fontWeight:900,color:clr}}>{fmtVal(mainK,last)}</div>
+          <div style={{fontSize:12,color:'#374151',marginTop:2}}>{ind?.name}</div>
+        </div>
+        {thr!==undefined && <div style={{textAlign:'right'}}>
+          <div style={{display:'flex',alignItems:'center',gap:5,justifyContent:'flex-end'}}>
+            <div style={{width:8,height:8,borderRadius:'50%',background:good?'#10b981':'#ef4444'}}/>
+            <span style={{fontSize:12,fontWeight:700,color:good?'#10b981':'#ef4444'}}>
+              {good?(ind.hb?'Acima do limiar':'Abaixo do limiar'):(ind.hb?'Abaixo do limiar':'Acima do limiar')}
+            </span>
+          </div>
+          <div style={{fontSize:10,color:'#374151',marginTop:2}}>Limiar: {fmtVal(mainK,thr)}</div>
+        </div>}
+      </div>
+
+      <ResponsiveContainer width="100%" height={210}>
+        {ctype==='line'
+          ? <AreaChart data={cd} margin={{top:6,right:4,left:0,bottom:0}}>
+              <defs>
+                <linearGradient id="mainG" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={clr} stopOpacity={.28}/>
+                  <stop offset="95%" stopColor={clr} stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.03)"/>
+              {thr!==undefined && <>
+                {ind.hb
+                  ? <><ReferenceArea y1={yMn} y2={thr} fill="rgba(239,68,68,.06)"/>
+                      <ReferenceArea y1={thr} y2={yMx} fill="rgba(16,185,129,.06)"/></>
+                  : <><ReferenceArea y1={yMn} y2={thr} fill="rgba(16,185,129,.06)"/>
+                      <ReferenceArea y1={thr} y2={yMx} fill="rgba(239,68,68,.06)"/></>
+                }
+                <ReferenceLine y={thr} stroke="#eab308" strokeDasharray="4 2" strokeWidth={1.5}
+                  label={{value:'limiar',fill:'#eab308',fontSize:9,position:'insideTopRight'}}/>
+              </>}
+              <XAxis dataKey="l" tick={{fill:'#374151',fontSize:9}} tickLine={false} axisLine={false}
+                interval={Math.floor(cd.length/5)}/>
+              <YAxis domain={[yMn,yMx]} tick={{fill:'#374151',fontSize:9}} tickLine={false} axisLine={false}
+                tickFormatter={v=>fmtVal(mainK,v)} width={44}/>
+              <Tooltip content={TT}/>
+              <Area type="monotone" dataKey="v" stroke={clr} strokeWidth={2.5}
+                fill="url(#mainG)" dot={false}
+                activeDot={{r:5,fill:clr,stroke:'#080d1a',strokeWidth:2}}/>
+            </AreaChart>
+          : <BarChart data={cd} margin={{top:6,right:4,left:0,bottom:0}}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.03)" vertical={false}/>
+              {thr!==undefined && <ReferenceLine y={thr} stroke="#eab308" strokeDasharray="4 2" strokeWidth={1.5}/>}
+              <XAxis dataKey="l" tick={{fill:'#374151',fontSize:9}} tickLine={false} axisLine={false}
+                interval={Math.floor(cd.length/5)}/>
+              <YAxis domain={[yMn,yMx]} tick={{fill:'#374151',fontSize:9}} tickLine={false} axisLine={false}
+                tickFormatter={v=>fmtVal(mainK,v)} width={44}/>
+              <Tooltip content={TT}/>
+              <Bar dataKey="v" radius={[3,3,0,0]}>
+                {cd.map((_,i)=>{
+                  const gd=thr!==undefined?isGd(mainK,_.v):null;
+                  const c=gd===null?'#0ea5e9':gd?'#10b981':'#ef4444';
+                  return <Cell key={i} fill={c} fillOpacity={.85}/>;
+                })}
+              </Bar>
+            </BarChart>
+        }
+      </ResponsiveContainer>
+    </div>
+
+    {/* Selector header */}
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+      <div>
+        <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9'}}>Indicadores</div>
+        <div style={{fontSize:11,color:'#374151',marginTop:2}}>{selMini.length} gráficos selecionados</div>
+      </div>
+      <button onClick={()=>setShowSel(!showSel)} style={{
+        padding:'6px 14px',borderRadius:8,border:'1px solid',fontSize:12,fontWeight:600,
+        borderColor:showSel?'#0ea5e9':'#1e2d4a',
+        background:showSel?'rgba(14,165,233,.12)':'transparent',
+        color:showSel?'#0ea5e9':'#475569'
+      }}>{showSel?'✕ Fechar':'＋ Selecionar'}</button>
+    </div>
+
+    {/* Selector Panel */}
+    {showSel && <div className="card" style={{marginBottom:14}}>
+      <input type="text" value={sSearch} onChange={e=>setSSearch(e.target.value)}
+        placeholder="Filtrar indicadores..." style={{marginBottom:12,fontSize:13}}/>
+      {BLOCOS.map(b=>{
+        const grp=filtInds.filter(([_,v])=>v.bloco===b);
+        if(!grp.length) return null;
+        const bc=BLOCO_CLR[b];
+        return <div key={b} style={{marginBottom:12}}>
+          <div style={{fontSize:10,fontWeight:800,color:bc,marginBottom:6,
+            textTransform:'uppercase',letterSpacing:.8}}>{b}</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
+            {grp.map(([k,v])=>{
+              const sel=selMini.includes(k);
+              return <button key={k} onClick={()=>toggleMini(k)} style={{
+                padding:'4px 10px',borderRadius:20,border:'1px solid',fontSize:11,fontWeight:500,
+                borderColor:sel?bc:'#1e2d4a',
+                background:sel?`${bc}22`:'transparent',
+                color:sel?bc:'#374151',transition:'all .15s'
+              }}>{v.name}</button>;
+            })}
+          </div>
+        </div>;
+      })}
+    </div>}
+
+    {/* Mini Charts Grid */}
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+      {selMini.map(k=><MiniChart key={k} k={k}/>)}
+    </div>
+  </div>;
+}
+
+// ── APP ───────────────────────────────────────────────────────────────────────
+
+function App() {
+  const [page,setPage]=useState('home');
+  const [asset,setAsset]=useState(null);
+
+  const nav=(to,data)=>{setAsset(data);setPage(to);window.scrollTo(0,0)};
+
+  return <div>
+    {page==='home' && <HomePage onNav={nav}/>}
+    {page==='asset' && <AssetPage {...asset} onBack={()=>setPage('home')}/>}
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
