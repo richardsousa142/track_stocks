@@ -24,18 +24,51 @@ def listar_ativos(
 
 @router.get("/ativos/busca")
 def buscar_ativos(q: str = Query(..., min_length=1)):
-    """Busca por ticker ou razão social."""
+    """Busca por ticker/razão social (ações) e nome/CNPJ (FIIs)."""
     pattern = f"%{q.upper()}%"
     with get_cursor() as cur:
+        # Ações
         cur.execute("""
             SELECT DISTINCT ticker, empresa
             FROM track_stocks.vw_indicadores_historicos
             WHERE (UPPER(ticker) LIKE %s OR UPPER(empresa) LIKE %s)
               AND ticker IS NOT NULL AND ticker != ''
             ORDER BY ticker
-            LIMIT 15
+            LIMIT 10
         """, (pattern, pattern))
-        return [{"ticker": r["ticker"], "empresa": r["empresa"]} for r in cur.fetchall()]
+        acoes = [
+            {"ticker": r["ticker"], "empresa": r["empresa"], "tipo": "acao"}
+            for r in cur.fetchall()
+        ]
+
+        # FIIs
+        cur.execute("""
+            SELECT
+                e.cnpj_normalizado,
+                e.razao_social AS nome_fundo,
+                COALESCE(m.segmento_atuacao, 'Outros') AS segmento
+            FROM track_stocks.empresas e
+            LEFT JOIN track_stocks.tb_fiis_meta m ON m.empresa_id = e.empresa_id
+            WHERE e.ticker IS NULL
+              AND (
+                  UPPER(e.razao_social)        LIKE %s
+                  OR e.cnpj_normalizado         LIKE %s
+                  OR UPPER(m.segmento_atuacao)  LIKE %s
+              )
+            ORDER BY e.razao_social
+            LIMIT 10
+        """, (pattern, pattern, pattern))
+        fiis = [
+            {
+                "ticker":  r["cnpj_normalizado"],
+                "empresa": r["nome_fundo"],
+                "segmento": r["segmento"],
+                "tipo":    "fii",
+            }
+            for r in cur.fetchall()
+        ]
+
+    return acoes + fiis
 
 
 @router.get("/ativos/{ticker}/indicadores")

@@ -4,7 +4,7 @@ import { User, Menu } from 'lucide-react';
 export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/60">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 h-14 flex items-center justify-between">
         <Link
           to="/"
           className="text-xl font-extrabold tracking-tight text-emerald-600 hover:text-emerald-700 transition-colors"

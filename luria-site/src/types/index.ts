@@ -8,7 +8,7 @@ export interface IndicatorConfig {
   freq?: Freq;
 }
 
-export type Bloco = 'BP' | 'DRE' | 'DFC' | 'CMB' | 'HST' | 'MKT' | 'VAL';
+export type Bloco = 'BP' | 'DRE' | 'DFC' | 'CMB' | 'HST' | 'MKT' | 'VAL' | 'FII';
 export type Unit = 'RATIO' | 'PERCENTUAL' | 'MOEDA' | 'INDICE' | 'OUTRO';
 export type AssetType = 'acoes' | 'fiis';
 export type ChartType = 'line' | 'bar';
@@ -73,6 +73,50 @@ export interface IndicadorAtual {
 export interface BuscaResult {
   ticker: string;
   empresa: string;
+  tipo?: 'acao' | 'fii';
+  segmento?: string;
+}
+
+export interface FiiBlocoScores {
+  solidez: number;
+  portfolio: number;
+  distribuicao: number;
+  eficiencia: number;
+}
+
+export interface FiiResumo {
+  cnpj: string;
+  nome_fundo: string;
+  segmento: string;
+  rank: number;
+  quality_score: number;
+  score_recent: number;
+  score_structural: number;
+  deterioration_penalty: number;
+  improvement_bonus: number;
+  trend: TrendLabel;
+  bloco_scores: FiiBlocoScores;
+  drivers: QualityDriver[];
+  red_flags: QualityDriver[];
+  data_coverage: number;
+}
+
+export interface FiiMeta {
+  cnpj: string;
+  nome_fundo: string;
+  segmento: string;
+  tipo_gestao: string;
+  nome_administrador: string;
+  cnpj_administrador: string;
+  quality_score?: number;
+  score_recent?: number;
+  score_structural?: number;
+  trend?: TrendLabel;
+  bloco_scores?: FiiBlocoScores;
+  drivers?: QualityDriver[];
+  red_flags?: QualityDriver[];
+  data_coverage?: number;
+  rank?: number;
 }
 
 export interface AnaliseTexto {

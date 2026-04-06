@@ -70,9 +70,46 @@ export const INDICATORS: Record<string, IndicatorConfig> = {
   val_margem_graham:          { name: 'Margem de Segurança Graham', bloco: 'VAL', unit: 'PERCENTUAL',                 higherBetter: true,  freq: 'T' },
   val_margem_bazin_6:         { name: 'Margem Bazin 6%',          bloco: 'VAL', unit: 'PERCENTUAL',                   higherBetter: true,  freq: 'T' },
   val_margem_bazin_10:        { name: 'Margem Bazin 10%',         bloco: 'VAL', unit: 'PERCENTUAL',                   higherBetter: true,  freq: 'T' },
+
+  // ── FIIs ─────────────────────────────────────────────────────────────────
+  // Patrimônio
+  fii_vpc:                    { name: 'Valor Patrimonial / Cota', bloco: 'FII', unit: 'MOEDA',      threshold: 0,      higherBetter: true,  freq: 'M' },
+  fii_patrimonio_liquido:     { name: 'Patrimônio Líquido',       bloco: 'FII', unit: 'MOEDA',                        higherBetter: true,  freq: 'M' },
+  fii_ativo_total:            { name: 'Ativo Total',              bloco: 'FII', unit: 'MOEDA',                        higherBetter: true,  freq: 'M' },
+  fii_passivo_total:          { name: 'Passivo Total',            bloco: 'FII', unit: 'MOEDA',                        higherBetter: false, freq: 'M' },
+  fii_disponibilidades:       { name: 'Disponibilidades',         bloco: 'FII', unit: 'MOEDA',                        higherBetter: true,  freq: 'M' },
+  // Estrutura
+  fii_passivo_sobre_ativo:    { name: 'Passivo / Ativo',          bloco: 'FII', unit: 'RATIO',      threshold: 0.3,    higherBetter: false, freq: 'M' },
+  fii_passivo_sobre_pl:       { name: 'Passivo / PL',             bloco: 'FII', unit: 'RATIO',      threshold: 0.5,    higherBetter: false, freq: 'M' },
+  fii_disponibilidades_sobre_ativo: { name: 'Disponib. / Ativo', bloco: 'FII', unit: 'RATIO',       threshold: 0.03,   higherBetter: true,  freq: 'M' },
+  // Composição
+  fii_pct_total_investido:    { name: '% Total Investido',        bloco: 'FII', unit: 'PERCENTUAL', threshold: 0.70,   higherBetter: true,  freq: 'M' },
+  fii_pct_caixa:              { name: '% Caixa',                  bloco: 'FII', unit: 'PERCENTUAL', threshold: 0.03,   higherBetter: true,  freq: 'M' },
+  fii_pct_liquidez:           { name: '% Liquidez',               bloco: 'FII', unit: 'PERCENTUAL',                   higherBetter: true,  freq: 'M' },
+  fii_pct_imoveis:            { name: '% Imóveis Renda',          bloco: 'FII', unit: 'PERCENTUAL',                   higherBetter: true,  freq: 'M' },
+  fii_pct_imoveis_construcao: { name: '% Imóveis em Construção',  bloco: 'FII', unit: 'PERCENTUAL',                   higherBetter: false, freq: 'M' },
+  fii_pct_terrenos:           { name: '% Terrenos',               bloco: 'FII', unit: 'PERCENTUAL',                   higherBetter: false, freq: 'M' },
+  fii_pct_cri_cra:            { name: '% CRI / CRA',              bloco: 'FII', unit: 'PERCENTUAL',                   higherBetter: true,  freq: 'M' },
+  fii_pct_lci_lca_lig:        { name: '% LCI / LCA / LIG',        bloco: 'FII', unit: 'PERCENTUAL',                   higherBetter: true,  freq: 'M' },
+  fii_pct_outros_vm:          { name: '% Outros VM',              bloco: 'FII', unit: 'PERCENTUAL',                   higherBetter: false, freq: 'M' },
+  fii_pct_direitos_reais:     { name: '% Direitos Reais',         bloco: 'FII', unit: 'PERCENTUAL',                   higherBetter: false, freq: 'M' },
+  fii_pct_recebiveis:         { name: '% Recebíveis',             bloco: 'FII', unit: 'PERCENTUAL',                   higherBetter: true,  freq: 'M' },
+  // Distribuição
+  fii_dy_mes:                 { name: 'DY Mensal',                bloco: 'FII', unit: 'PERCENTUAL', threshold: 0.005,  higherBetter: true,  freq: 'M' },
+  fii_dy_anual:               { name: 'DY Anual (12M)',           bloco: 'FII', unit: 'PERCENTUAL', threshold: 0.06,   higherBetter: true,  freq: 'M' },
+  fii_rendimentos_sobre_pl:   { name: 'Rendimentos / PL',         bloco: 'FII', unit: 'PERCENTUAL', threshold: 0.004,  higherBetter: true,  freq: 'M' },
+  // Custos
+  fii_taxa_adm_pagar_sobre_pl:{ name: 'Taxa ADM / PL',            bloco: 'FII', unit: 'RATIO',      threshold: 0.008,  higherBetter: false, freq: 'M' },
+  fii_taxa_perf_pagar_sobre_pl:{ name: 'Taxa Performance / PL',   bloco: 'FII', unit: 'RATIO',                        higherBetter: false, freq: 'M' },
+  fii_pct_despesas_adm:       { name: '% Despesas ADM',           bloco: 'FII', unit: 'PERCENTUAL', threshold: 0.002,  higherBetter: false, freq: 'M' },
+  // Cotistas
+  fii_total_cotistas:         { name: 'Total de Cotistas',        bloco: 'FII', unit: 'OUTRO',                        higherBetter: true,  freq: 'M' },
+  fii_pct_pf:                 { name: '% Cotistas PF',            bloco: 'FII', unit: 'PERCENTUAL',                   higherBetter: false, freq: 'M' },
+  fii_pct_pj_nao_fin:         { name: '% Cotistas PJ (não fin.)', bloco: 'FII', unit: 'PERCENTUAL',                   higherBetter: true,  freq: 'M' },
 };
 
 export const BLOCOS: Bloco[] = ['BP', 'DRE', 'DFC', 'CMB', 'MKT', 'VAL'];
+export const FII_BLOCOS: Bloco[] = ['FII'];
 
 export const BLOCO_LABEL: Record<string, string> = {
   BP:  'Balanço Patrimonial',
@@ -82,6 +119,7 @@ export const BLOCO_LABEL: Record<string, string> = {
   MKT: 'Mercado & Múltiplos',
   VAL: 'Valuation (Graham & Bazin)',
   HST: 'Histórico',
+  FII: 'Indicadores FII',
 };
 
 export const BLOCO_COLORS: Record<Bloco, string> = {
@@ -92,6 +130,7 @@ export const BLOCO_COLORS: Record<Bloco, string> = {
   MKT: '#e11d48',
   HST: '#64748b',
   VAL: '#0891b2',
+  FII: '#0d9488',
 };
 
 export const BLOCO_BG: Record<string, string> = {
@@ -102,6 +141,7 @@ export const BLOCO_BG: Record<string, string> = {
   MKT: 'bg-rose-50 text-rose-700 border-rose-200',
   HST: 'bg-slate-50 text-slate-600 border-slate-200',
   VAL: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+  FII: 'bg-teal-50 text-teal-700 border-teal-200',
 };
 
 export const DEFAULT_MINI_INDICATORS = [

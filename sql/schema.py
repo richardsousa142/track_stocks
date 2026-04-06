@@ -17,6 +17,8 @@ DDL                  = _HERE.joinpath("ddl_schema.sql").read_text(encoding="utf-
 DDL_PRECOS           = _HERE.joinpath("ddl_precos.sql").read_text(encoding="utf-8")
 DDL_DEMONSTRATIVOS   = _HERE.joinpath("ddl_demonstrativos.sql").read_text(encoding="utf-8")
 DDL_ACOES_SHARES     = _HERE.joinpath("ddl_acoes_shares.sql").read_text(encoding="utf-8")
+DDL_FIIS             = _HERE.joinpath("ddl_fiis.sql").read_text(encoding="utf-8")
+DDL_VW_FII           = _HERE.joinpath("ddl_vw_fii.sql").read_text(encoding="utf-8")
 
 
 def create_schema_and_catalog() -> None:
@@ -43,6 +45,12 @@ def create_schema_and_catalog() -> None:
 
             cur.execute(DDL_ACOES_SHARES)
             logger.info("DDL de ações (shares outstanding) aplicado.")
+
+            cur.execute(DDL_FIIS)
+            logger.info("DDL de FIIs (metadados) aplicado.")
+
+            cur.execute(DDL_VW_FII)
+            logger.info("View vw_fii_indicadores aplicada.")
 
             rows = build_indicator_rows()
             cur.executemany(

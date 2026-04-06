@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .routers.ativos import router as ativos_router
 from .routers.valuation import router as valuation_router
+from .routers.fiis import router as fiis_router
 
 app = FastAPI(
     title="Luria API",
@@ -25,6 +26,7 @@ app.add_middleware(
 
 app.include_router(ativos_router)
 app.include_router(valuation_router)
+app.include_router(fiis_router)
 
 
 @app.get("/api/health")

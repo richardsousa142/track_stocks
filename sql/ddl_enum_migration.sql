@@ -1,4 +1,19 @@
--- 0. Adiciona 'VAL' ao bloco_indicador_enum (valuation: Graham, Bazin, etc.)
+-- 0a. Adiciona 'FII' ao bloco_indicador_enum (indicadores de fundos imobiliários)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_enum e
+        JOIN pg_type t ON t.oid = e.enumtypid
+        JOIN pg_namespace n ON n.oid = t.typnamespace
+        WHERE t.typname = 'bloco_indicador_enum'
+          AND n.nspname = 'track_stocks'
+          AND e.enumlabel = 'FII'
+    ) THEN
+        ALTER TYPE track_stocks.bloco_indicador_enum ADD VALUE 'FII';
+    END IF;
+END$$;
+
+-- 0b. Adiciona 'VAL' ao bloco_indicador_enum (valuation: Graham, Bazin, etc.)
 DO $$
 BEGIN
     IF NOT EXISTS (

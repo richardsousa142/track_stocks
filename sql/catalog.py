@@ -57,6 +57,9 @@ QUANT_INDICATOR_CODES = [
 ]
 
 MOEDA_CODES = {
+    # FII — valores absolutos em R$
+    "fii_vpc", "fii_patrimonio_liquido", "fii_total_ativo",
+    "fii_total_passivo", "fii_cotas_emitidas", "fii_total_cotistas",
     # VAL — valores em R$
     "val_lpa", "val_vpa", "val_dpa_ttm",
     "val_graham", "val_bazin_6", "val_bazin_10",
@@ -102,6 +105,8 @@ PERCENTUAL_HINTS = (
     "dividend_yield",
     # VAL margens
     "val_margem_",
+    # FII percentuais
+    "fii_pct_", "fii_dy_",
 )
 
 INDEX_HINTS = (
@@ -140,6 +145,8 @@ def infer_bloco(codigo: str) -> str:
         return "MKT"
     if codigo.startswith("val_"):
         return "VAL"
+    if codigo.startswith("fii_"):
+        return "FII"
     return "OUTRO"
 
 
@@ -147,6 +154,8 @@ def infer_camada(codigo: str) -> int:
     if codigo.startswith("mkt_") or codigo.startswith("val_"):
         return 3
     if codigo.startswith("hst_"):
+        return 2
+    if codigo.startswith("fii_"):
         return 2
     return 1
 
@@ -192,12 +201,62 @@ VALUATION_CODES = [
 ]
 
 
+# ── Indicadores de FIIs (sem preço) ─────────────────────────────────────────
+FII_INDICATOR_CODES = [
+    # ── Patrimonial ──────────────────────────────────────────────────────────
+    "fii_vpc",                          # Valor Patrimonial por Cota (R$)
+    "fii_patrimonio_liquido",           # Patrimônio Líquido total (R$)
+    "fii_total_ativo",                  # Total do Ativo (R$)
+    "fii_total_passivo",                # Total do Passivo (R$)
+    "fii_passivo_sobre_ativo",          # Passivo / Ativo
+    "fii_passivo_sobre_pl",             # Passivo / PL
+    "fii_disponibilidades_sobre_ativo", # Disponibilidades / Ativo
+    "fii_disponibilidades_sobre_passivo", # Disponibilidades / Passivo
+
+    # ── Composição de carteira (% sobre Ativo) ────────────────────────────
+    "fii_pct_total_investido",          # Total Investido / Ativo
+    "fii_pct_liquidez",                 # Necessidades de Liquidez / Ativo
+    "fii_pct_caixa",                    # (Disponib + Tít.Pub + FRF) / Ativo
+    "fii_pct_titulos_publicos",         # Títulos Públicos / Ativo
+    "fii_pct_titulos_privados",         # Títulos Privados / Ativo
+    "fii_pct_fundos_renda_fixa",        # Fundos Renda Fixa / Ativo
+    "fii_pct_imoveis",                  # Direitos sobre Bens Imóveis / Ativo
+    "fii_pct_imoveis_renda_acabados",   # Imóveis Renda Acabados / Ativo
+    "fii_pct_imoveis_construcao",       # Imóveis em Construção / Ativo
+    "fii_pct_terrenos",                 # Terrenos / Ativo
+    "fii_pct_cri_cra",                  # (CRI + CRI_CRA) / Ativo
+    "fii_pct_lci_lca_lig",              # (LCI + LCI_LCA + LIG) / Ativo
+    "fii_pct_outros_mob",               # Outros Valores Mobiliários / Ativo
+    "fii_pct_direitos_reais",           # Outros Direitos Reais / Ativo
+    "fii_pct_recebiveis",               # (Valores Receber + Aluguel) / Ativo
+    "fii_pct_fii_cotas",                # FIIs / Ativo (fund-of-funds)
+    "fii_pct_acoes",                    # Ações / Ativo
+
+    # ── Taxas e custos ───────────────────────────────────────────────────────
+    "fii_pct_despesas_adm",             # % Despesas Taxa Administração (campo CVM)
+    "fii_taxa_adm_pagar_sobre_pl",      # Taxa Adm a Pagar / PL
+    "fii_taxa_perf_pagar_sobre_pl",     # Taxa Performance a Pagar / PL
+
+    # ── Proventos ────────────────────────────────────────────────────────────
+    "fii_dy_mes",                       # Dividend Yield mensal (campo CVM)
+    "fii_dy_anual",                     # DY anual = soma rolling 12 meses de fii_dy_mes
+    "fii_rendimentos_sobre_pl",         # Rendimentos a Distribuir / PL
+
+    # ── Cotistas ─────────────────────────────────────────────────────────────
+    "fii_total_cotistas",               # Número total de cotistas
+    "fii_pct_cotistas_pf",              # % cotistas Pessoa Física
+    "fii_pct_cotistas_pj_nao_fin",      # % cotistas PJ não financeira
+    "fii_cotas_emitidas",               # Quantidade de cotas emitidas
+]
+
+
 def build_indicator_rows():
     rows = []
     all_codes = [c for c in INDICATOR_CODES if c not in {"freq", "empresa", "ano"}]
     all_codes += QUANT_INDICATOR_CODES
     all_codes += MULTIPLOS_MKT_CODES
     all_codes += VALUATION_CODES
+    all_codes += FII_INDICATOR_CODES
 
     for cod in all_codes:
         rows.append((

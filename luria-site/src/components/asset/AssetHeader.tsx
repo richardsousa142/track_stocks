@@ -15,59 +15,55 @@ function fmtBRL(v?: number | null) {
   return `R$ ${v.toFixed(2)}`;
 }
 
-function fmtPct(v?: number | null) {
+function fmtPct(v?: number | null): string | null {
   if (v == null || isNaN(v)) return null;
-  const sign = v >= 0 ? '+' : '';
-  return `${sign}${v.toFixed(1)}%`;
+  return `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
 }
 
-interface ValuationBadgeProps {
+interface ValCardProps {
   label: string;
   value?: number | null;
   margin?: number | null;
-  colorScheme: 'emerald' | 'cyan' | 'amber';
+  scheme: 'green' | 'red';
 }
 
-function ValuationBadge({ label, value, margin, colorScheme }: ValuationBadgeProps) {
+function ValCard({ label, value, margin, scheme }: ValCardProps) {
   if (value == null) return null;
 
-  const schemes = {
-    emerald: {
+  const isUp = margin != null && margin >= 0;
+
+  const styles = {
+    green: {
       wrap: 'bg-emerald-50 border-emerald-200',
       label: 'text-emerald-600',
-      value: 'text-emerald-900',
-      pct: margin != null && margin >= 0 ? 'text-emerald-600' : 'text-red-500',
+      value: 'text-emerald-700',
+      pct: 'text-emerald-600',
     },
-    cyan: {
-      wrap: 'bg-cyan-50 border-cyan-200',
-      label: 'text-cyan-600',
-      value: 'text-cyan-900',
-      pct: margin != null && margin >= 0 ? 'text-emerald-600' : 'text-red-500',
+    red: {
+      wrap: 'bg-red-50 border-red-200',
+      label: 'text-red-400',
+      value: 'text-red-600',
+      pct: 'text-red-500',
     },
-    amber: {
-      wrap: 'bg-amber-50 border-amber-200',
-      label: 'text-amber-600',
-      value: 'text-amber-900',
-      pct: margin != null && margin >= 0 ? 'text-emerald-600' : 'text-red-500',
-    },
-  };
+  }[scheme];
 
-  const s = schemes[colorScheme];
-  const pctStr = fmtPct(margin);
+  const pct = fmtPct(margin);
 
   return (
-    <div className={`flex flex-col px-3 py-2 rounded-xl border ${s.wrap} min-w-[110px]`}>
-      <span className={`text-[10px] font-semibold uppercase tracking-wide ${s.label} mb-0.5`}>
+    <div className={`flex-1 rounded-2xl border px-4 py-3 ${styles.wrap}`}>
+      <p className={`text-[9px] font-bold uppercase tracking-widest mb-1.5 ${styles.label}`}>
         {label}
-      </span>
-      <span className={`text-sm font-bold ${s.value} leading-tight`}>{fmtBRL(value)}</span>
-      {pctStr && (
-        <span className={`text-[11px] font-semibold ${s.pct} flex items-center gap-0.5 mt-0.5`}>
-          {margin != null && margin >= 0
-            ? <TrendingDown size={10} />
-            : <TrendingUp size={10} />}
-          {pctStr}
-        </span>
+      </p>
+      <p className={`text-lg font-semibold leading-none ${styles.value}`}>
+        {fmtBRL(value)}
+      </p>
+      {pct && (
+        <p className={`flex items-center gap-1 text-xs font-semibold mt-1.5 ${styles.pct}`}>
+          {isUp
+            ? <TrendingUp size={11} />
+            : <TrendingDown size={11} />}
+          {pct}
+        </p>
       )}
     </div>
   );
@@ -84,50 +80,50 @@ export default function AssetHeader({ ticker, empresa, setor, valuation }: Asset
 
   return (
     <div className="mb-6">
-      {/* Linha principal: voltar + ticker/nome */}
-      <div className="flex items-start gap-4">
+      {/* Voltar + nome + ticker */}
+      <div className="flex items-center gap-4 mb-4">
         <button
           onClick={() => navigate('/')}
-          className="mt-0.5 w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all shadow-sm shrink-0"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded-xl px-5 py-1.5 shadow-sm transition-all hover:border-slate-300 shrink-0"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={14} />
+          Voltar
         </button>
 
-        <div className="flex-1 min-w-0">
-          {/* Nome + ticker */}
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-xl font-bold text-slate-900 truncate">{empresa || ticker}</h1>
+            <h1 className="text-xl font-bold text-slate-900">{empresa || ticker}</h1>
             <Badge variant="info">{ticker}</Badge>
           </div>
           {setor && (
-            <p className="text-xs text-slate-500 mt-0.5">{setor} · B3</p>
-          )}
-
-          {/* Badges de valuation */}
-          {hasValuation && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              <ValuationBadge
-                label="Graham"
-                value={valuation!.valor_justo_graham}
-                margin={valuation!.margem_graham_pct}
-                colorScheme="emerald"
-              />
-              <ValuationBadge
-                label="Bazin 6%"
-                value={valuation!.preco_teto_bazin_6}
-                margin={valuation!.margem_bazin_6_pct}
-                colorScheme="cyan"
-              />
-              <ValuationBadge
-                label="Bazin 10%"
-                value={valuation!.preco_teto_bazin_10}
-                margin={valuation!.margem_bazin_10_pct}
-                colorScheme="amber"
-              />
-            </div>
+            <p className="text-xs text-slate-400 mt-0.5">{setor} · B3</p>
           )}
         </div>
       </div>
+
+      {/* Cards de valuation */}
+      {hasValuation && (
+        <div className="flex gap-3">
+          <ValCard
+            label="Graham"
+            value={valuation!.valor_justo_graham}
+            margin={valuation!.margem_graham_pct}
+            scheme={valuation!.margem_graham_pct != null && valuation!.margem_graham_pct >= 0 ? 'green' : 'red'}
+          />
+          <ValCard
+            label="Bazin 6%"
+            value={valuation!.preco_teto_bazin_6}
+            margin={valuation!.margem_bazin_6_pct}
+            scheme={valuation!.margem_bazin_6_pct != null && valuation!.margem_bazin_6_pct >= 0 ? 'green' : 'red'}
+          />
+          <ValCard
+            label="Bazin 10%"
+            value={valuation!.preco_teto_bazin_10}
+            margin={valuation!.margem_bazin_10_pct}
+            scheme={valuation!.margem_bazin_10_pct != null && valuation!.margem_bazin_10_pct >= 0 ? 'green' : 'red'}
+          />
+        </div>
+      )}
     </div>
   );
 }

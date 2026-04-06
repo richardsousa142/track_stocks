@@ -12,15 +12,15 @@ const TABS: { value: AssetType; label: string }[] = [
 
 export default function TabBar({ active, onChange }: TabBarProps) {
   return (
-    <div className="inline-flex bg-slate-100 rounded-xl p-1 mb-8">
+    <div className="inline-flex items-center gap-1 border border-slate-200 rounded-xl p-1 shadow-sm" style={{ backgroundColor: '#f0f4f8' }}>
       {TABS.map((tab) => (
         <button
           key={tab.value}
           onClick={() => onChange(tab.value)}
-          className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+          className={`px-7 py-1 rounded-lg text-sm font-semibold transition-all duration-200 ${
             active === tab.value
-              ? 'bg-white text-emerald-700 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
+              ? 'bg-white text-slate-800 shadow-sm'
+              : 'text-slate-400 hover:text-slate-600'
           }`}
         >
           {tab.label}

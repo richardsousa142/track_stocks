@@ -16,6 +16,7 @@ const CHIP_SELECTED: Record<string, { bg: string; border: string; text: string; 
   MKT: { bg: 'bg-rose-50',    border: 'border-rose-300',    text: 'text-rose-700',    ring: 'ring-rose-200' },
   HST: { bg: 'bg-slate-100',  border: 'border-slate-300',   text: 'text-slate-600',   ring: 'ring-slate-200' },
   VAL: { bg: 'bg-cyan-50',    border: 'border-cyan-300',    text: 'text-cyan-700',    ring: 'ring-cyan-200' },
+  FII: { bg: 'bg-teal-50',    border: 'border-teal-300',    text: 'text-teal-700',    ring: 'ring-teal-200' },
 };
 
 export default function IndicatorSelector({ applied, onApply }: IndicatorSelectorProps) {
